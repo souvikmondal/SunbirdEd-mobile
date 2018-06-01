@@ -105,4 +105,5 @@
     <plugin name="cordova-plugin-sunbirdsplash" spec="https://github.com/project-sunbird/cordova-plugin-sunbirdsplash.git" />
     <plugin name="cordova-plugin-geniecanvas" spec="https://github.com/project-sunbird/cordova-plugin-geniecanvas.git" />
     <plugin name="cordova-plugin-genie-sdk" spec="https://github.com/project-sunbird/cordova-plugin-genie-sdk" />
+    <engine name="android" spec="~7.0.0" />
 </widget>
