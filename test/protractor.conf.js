@@ -7,6 +7,8 @@ exports.config = {
   */
   seleniumAddress: 'http://0000:4723/wd/hub',
   seleniumServerJar: jar.path,
+  allScriptsTimeout: 35000,
+  defaultTimeoutInterval: 60000,
 
   specs: ['../src/**/*.e2e.ts'],
 

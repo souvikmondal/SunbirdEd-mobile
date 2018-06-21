@@ -1,46 +1,51 @@
-import { browser, element, by, error, ElementFinder, ElementArrayFinder } from 'protractor';
+import { browser, element, by, error, ElementFinder, ElementArrayFinder, protractor } from 'protractor';
 
 describe('Language Settings', () => {
 
-    it('should have a continue button', () => {
+    let continueBtn: ElementFinder, langugaeList: ElementFinder;
 
-        element(by.tagName("button")).getText()
+    beforeEach(done => {
+        browser.get("/#page-language-settings")
+        continueBtn = element(by.tagName("button"));
+        langugaeList = element(by.tagName("ion-item"));
+    });
+
+    it('should have a continue button', done => {
+
+        browser.waitForAngular();
+
+        continueBtn.getText()
         .then(text => {
             expect(text).toEqual("CONTINUE");
+            done();
         })
         .catch(error => {
-
+            console.log(error);
         });
 
-    });
+    }, 60000);
 
-    it('should have 5 language options', () => {
+    it('should select the user clicked language and go to onboarding page', done => {
 
-        element.all(by.tagName("ion-item"))
-        .then(items => {
-            expect(items.length).toBe(5);
-        }).catch(() => {
+        browser.waitForAngular();
 
-        });
-        
-
-    });
-
-    it('should select the user clicked language and go to onboarding page', () => {
-        //random select any language and proceed
-        element.all(by.tagName("ion-item"))
-        .then(items => {
-            return items[2].click();
+        browser.wait(protractor.ExpectedConditions.elementToBeClickable(langugaeList), 5000)
+        .then(() => {
+            return langugaeList.click();
         })
         .then(() => {
-            //click continue button should open onboarding page
-            return element(by.tagName("button")).click();
+            return browser.wait(protractor.ExpectedConditions.elementToBeClickable(continueBtn), 5000);
+        })
+        .then(() => {
+            return continueBtn.click();
         })
         .then(() => {
             expect(element(by.css('page-onboarding')));
+            done();
         })
-        .catch(() => {
-
+        .catch((error) => {
+            console.log("souviksouviksouviksouviksouviksouviksouviksouviksouvik");
+            console.log(error);
         });
-    });
+    }, 60000);
 });
