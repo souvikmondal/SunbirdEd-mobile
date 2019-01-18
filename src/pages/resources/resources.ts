@@ -6,21 +6,6 @@ import {
   AfterViewInit
 } from '@angular/core';
 import {
-  PageAssembleService,
-  PageAssembleCriteria,
-  ContentService,
-  ImpressionType,
-  PageId,
-  Environment,
-  InteractType,
-  InteractSubtype,
-  SharedPreferences,
-  ContentFilterCriteria,
-  ProfileType,
-  PageAssembleFilter,
-  FrameworkService
-} from 'sunbird';
-import {
   NavController,
   PopoverController,
   Events
@@ -90,20 +75,16 @@ export class ResourcesPage implements OnInit, AfterViewInit {
 
   constructor(
     public navCtrl: NavController,
-    private pageService: PageAssembleService,
     private ngZone: NgZone,
-    private contentService: ContentService,
     private qrScanner: SunbirdQRScanner,
     private popCtrl: PopoverController,
     private events: Events,
-    private preference: SharedPreferences,
     private zone: NgZone,
     private appGlobalService: AppGlobalService,
     private appVersion: AppVersion,
     private formAndFrameworkUtilService: FormAndFrameworkUtilService,
     private telemetryGeneratorService: TelemetryGeneratorService,
     private commonUtilService: CommonUtilService,
-    private framework: FrameworkService
   ) {
     this.preference.getString(PreferenceKey.SELECTED_LANGUAGE_CODE)
       .then(val => {

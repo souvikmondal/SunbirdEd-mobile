@@ -7,7 +7,6 @@ import {TranslateLoader, TranslateModule, TranslateService} from '@ngx-translate
 import {TranslateHttpLoader} from '@ngx-translate/http-loader';
 import {HttpClient, HttpClientModule} from '@angular/common/http';
 import {PluginModules} from './module.service';
-import {EventService, FrameworkModule, TabsPage} from 'sunbird';
 import {AppVersion} from '@ionic-native/app-version';
 import {SocialSharing} from '@ionic-native/social-sharing';
 import {ImageLoader, ImageLoaderConfig, IonicImageLoader} from 'ionic-image-loader';
@@ -22,6 +21,7 @@ import {CommonUtilService} from '../service/common-util.service';
 import {BroadcastComponent} from '../component/broadcast/broadcast';
 import {LogoutHandlerService} from '@app/service/handlers/logout-handler.service';
 import {TncUpdateHandlerService} from '@app/service/handlers/tnc-update-handler.service';
+import { TabsPage } from '@app/tabs/tabs';
 
 export const createTranslateLoader = (httpClient: HttpClient) => {
   return new TranslateHttpLoader(httpClient, './assets/i18n/', '.json');
@@ -37,7 +37,6 @@ export const createTranslateLoader = (httpClient: HttpClient) => {
   imports: [
     HttpClientModule,
     BrowserModule,
-    FrameworkModule,
     TranslateModule.forRoot({
       loader: {
         provide: TranslateLoader,
@@ -87,7 +86,6 @@ export class AppModule {
 
   constructor(
     translate: TranslateService,
-    private eventService: EventService,
     private events: Events,
     private imageConfig: ImageLoaderConfig) {
 
@@ -99,16 +97,16 @@ export class AppModule {
   }
 
   registerForEvent() {
-    this.eventService.register((response) => {
-      const res = JSON.parse(response);
-      if (res && res.type === 'genericEvent') {
-        this.events.publish('generic.event', response);
-      } else {
-        this.events.publish('genie.event', response);
-      }
+    // this.eventService.register((response) => {
+    //   const res = JSON.parse(response);
+    //   if (res && res.type === 'genericEvent') {
+    //     this.events.publish('generic.event', response);
+    //   } else {
+    //     this.events.publish('genie.event', response);
+    //   }
 
-    }, (error) => {
-      // console.log("Event : " + error);
-    });
+    // }, (error) => {
+    //   // console.log("Event : " + error);
+    // });
   }
 }

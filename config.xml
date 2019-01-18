@@ -106,7 +106,6 @@
     <plugin name="cordova-plugin-imagechooser" spec="https://github.com/project-sunbird/cordova-plugin-imagechooser.git" />
     <plugin name="cordova-plugin-file-support" spec="https://github.com/project-sunbird/cordova-plugin-file-support.git" />
     <plugin name="cordova-plugin-qr-scanner" spec="https://github.com/project-sunbird/cordova-plugin-qr-scanner.git" />
-    <plugin name="cordova-plugin-sunbirdsplash" spec="https://github.com/project-sunbird/cordova-plugin-sunbirdsplash.git" />
     <plugin name="cordova-plugin-openrap" spec="https://github.com/project-sunbird/cordova-plugin-openrap.git" />
     <plugin name="cordova-plugin-geniecanvas" spec="https://github.com/project-sunbird/cordova-plugin-geniecanvas.git" />
     <plugin name="cordova-android-support-gradle-release" spec="^2.0.1">
@@ -116,5 +115,8 @@
         <variable name="URL_SCHEME" value="org.sunbird" />
         <variable name="URL_HOST" value="android" />
     </plugin>
-    <engine name="android" spec="7.0.0" />
+    <engine name="android" spec="~7.1.1" />
+    <plugin name="cordova-plugin-sunbirdsplash" spec="../cordova-plugin-sunbirdsplash" />
+    <plugin name="cordova-plugin-advanced-http" spec="^2.0.3" />
+    <plugin name="sb-cordova-plugin-db" spec="https://github.com/Sunbird-Ed/sb-cordova-plugin-db.git" />
 </widget>
