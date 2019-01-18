@@ -1,28 +1,8 @@
-import {
-  Component,
-  NgZone,
-  OnInit
-} from '@angular/core';
-import {
-  CourseService,
-  AuthService,
-  CourseBatchesRequest,
-  CourseBatchStatus,
-  CourseEnrollmentType,
-  EnrollCourseRequest
-} from 'sunbird';
-import {
-  IonicPage,
-  NavController,
-  NavParams,
-  Events
-} from 'ionic-angular';
-import * as _ from 'lodash';
-import {
-  ProfileConstants,
-  EventTopics
-} from '../../app/app.constant';
-import { CommonUtilService } from '../../service/common-util.service';
+import {Component, NgZone, OnInit} from '@angular/core';
+import {Events, IonicPage, NavController, NavParams} from 'ionic-angular';
+import {EventTopics, ProfileConstants} from '../../app/app.constant';
+import {CommonUtilService} from '@app/service';
+import {AuthService, CourseService, EnrollCourseRequest} from 'sunbird-sdk';
 
 /**
  * Generated class for the CourseBatchesPage page.
@@ -77,15 +57,6 @@ export class CourseBatchesPage implements OnInit {
    */
   selectedFilter: string;
 
-  /**
-   * Default method of class CourseBatchesComponent
-   *
-   * @param {CourseService} courseService To get batches list
-   * @param {NavController} navCtrl To redirect form one page to another
-   * @param {NavParams} navParams To get url params
-   * @param {NgZone} zone To bind data
-   * @param {AuthService} authService To get logged-in user data
-   */
   constructor(
     private courseService: CourseService,
     private navCtrl: NavController,
@@ -113,8 +84,8 @@ export class CourseBatchesPage implements OnInit {
       batchId: item.id
     };
     this.courseService.enrollCourse(enrollCourseRequest)
-      .then((data: any) => {
-        data = JSON.parse(data);
+      .toPromise()
+      .then(() => {
         this.zone.run(() => {
           console.log('You have successfully enrolled...');
           this.commonUtilService.showToast(this.commonUtilService.translateMessage('COURSE_ENROLLED'));
@@ -142,13 +113,13 @@ export class CourseBatchesPage implements OnInit {
    * Get logged-user id. User id is needed to enroll user into batch.
    */
   getUserId(): void {
-    this.authService.getSessionData((session) => {
-      if (session === undefined || session == null || session === 'null') {
+    this.authService.getSession().toPromise().then((session) => {
+      if (session === undefined || session == null) {
         console.log('session expired');
         this.zone.run(() => { this.isGuestUser = true; });
       } else {
         this.zone.run(() => {
-          const sessionObj = JSON.parse(session);
+          const sessionObj = session;
           this.isGuestUser = false;
           this.userId = sessionObj[ProfileConstants.USER_TOKEN];
           this.getBatchesByCourseId();
@@ -165,7 +136,7 @@ export class CourseBatchesPage implements OnInit {
     this.upcommingBatches = this.navParams.get('upcommingBatches');
   }
 
-  spinner(flag) {
+  spinner() {
     this.zone.run(() => {
       this.showLoader = false;
     });
