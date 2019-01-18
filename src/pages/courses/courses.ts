@@ -1,57 +1,34 @@
-import { ViewMoreActivityPage } from './../view-more-activity/view-more-activity';
-import {
-  Component,
-  NgZone,
-  OnInit
-} from '@angular/core';
-import {
-  NavController,
-  PopoverController,
-  Events
-} from 'ionic-angular';
-import { AppVersion } from '@ionic-native/app-version';
-import { IonicPage } from 'ionic-angular';
-import {
-  SharedPreferences,
-  CourseService,
-  PageAssembleService,
-  PageAssembleCriteria,
-  ImpressionType,
-  PageId,
-  Environment,
-  ContentService,
-  ProfileType,
-  PageAssembleFilter,
-  InteractType,
-  InteractSubtype
-} from 'sunbird';
-import {
-  QRResultCallback,
-  SunbirdQRScanner
-} from '../qrscanner/sunbirdqrscanner.service';
-import { SearchPage } from '../search/search';
-import { ContentDetailsPage } from '../content-details/content-details';
+import {Component, NgZone, OnInit} from '@angular/core';
+import {Events, IonicPage, NavController, PopoverController} from 'ionic-angular';
+import {AppVersion} from '@ionic-native/app-version';
+import {QRResultCallback, SunbirdQRScanner} from '../qrscanner/sunbirdqrscanner.service';
+import {SearchPage} from '../search/search';
 import * as _ from 'lodash';
-import {
-  ProfileConstants,
-  EventTopics,
-  PreferenceKey,
-  ContentType,
-  PageName,
-  ContentCard,
-  ViewMore
-} from '../../app/app.constant';
-import {
-  PageFilterCallback,
-  PageFilter
-} from '../page-filter/page.filter';
-import { AppGlobalService } from '../../service/app-global.service';
 import Driver from 'driver.js';
-import { CourseUtilService } from '../../service/course-util.service';
-import { updateFilterInSearchQuery } from '../../util/filter.util';
-import { FormAndFrameworkUtilService } from '../profile/formandframeworkutil.service';
-import { CommonUtilService } from '../../service/common-util.service';
-import { TelemetryGeneratorService } from '../../service/telemetry-generator.service';
+import {ContentCard, ContentType, EventTopics, PageName, PreferenceKey, ProfileConstants, ViewMore} from '../../app/app.constant';
+import {PageFilter, PageFilterCallback} from '../page-filter/page.filter';
+import {AppGlobalService, CommonUtilService, CourseUtilService, TelemetryGeneratorService} from '@app/service';
+import {updateFilterInSearchQuery} from '@app/util/filter.util';
+import {FormAndFrameworkUtilService} from '@app/pages/profile';
+import {ContentDetailsPage} from '../content-details/content-details';
+import {ViewMoreActivityPage} from '@app/pages/view-more-activity';
+import {
+  ContentService,
+  CourseService,
+  Environment,
+  GenerateImpressionTelemetryAfterMethod,
+  GenerateInteractTelemetryAfterMethod,
+  GenerateInteractTelemetryBeforeMethod,
+  ImpressionType,
+  InteractSubtype,
+  InteractType,
+  PageAssembleCriteria,
+  PageAssembleFilter,
+  PageAssembleService,
+  PageId,
+  ProfileType,
+  TelemetryRequestFactory
+} from 'sunbird-sdk';
 
 @IonicPage()
 @Component({
@@ -114,14 +91,6 @@ export class CoursesPage implements OnInit {
   callback: QRResultCallback;
   pageFilterCallBack: PageFilterCallback;
 
-  /**
-   * Default method of class CoursesPage
-   *
-   * @param {NavController} navCtrl To navigate user from one page to another
-   * @param {CourseService} courseService Service to get enrolled courses
-   * @param {PageAssembleService} pageService Service to get latest and popular courses
-   * @param {NgZone} ngZone To bind data
-   */
   constructor(
     private appVersion: AppVersion,
     private navCtrl: NavController,
@@ -132,7 +101,6 @@ export class CoursesPage implements OnInit {
     private popCtrl: PopoverController,
     private events: Events,
     private contentService: ContentService,
-    private preference: SharedPreferences,
     private appGlobalService: AppGlobalService,
     private courseUtilService: CourseUtilService,
     private formAndFrameworkUtilService: FormAndFrameworkUtilService,
@@ -140,12 +108,8 @@ export class CoursesPage implements OnInit {
     private telemetryGeneratorService: TelemetryGeneratorService
   ) {
     this.tabBarElement = document.querySelector('.tabbar.show-tabbar');
-    this.preference.getString(PreferenceKey.SELECTED_LANGUAGE_CODE)
-      .then(val => {
-        if (val && val.length) {
-          this.selectedLanguage = val;
-        }
-      });
+
+    this.selectedLanguage = localStorage.getItem(PreferenceKey.SELECTED_LANGUAGE_CODE);
 
     this.subscribeUtilityEvents();
 
@@ -157,59 +121,76 @@ export class CoursesPage implements OnInit {
   }
 
   /**
- * Angular life cycle hooks
- */
+   * Angular life cycle hooks
+   */
   ngOnInit() {
     this.getCourseTabData();
   }
+
   ionViewDidEnter() {
     this.isVisible = true;
   }
 
+  @GenerateImpressionTelemetryAfterMethod({
+    impressionType: ImpressionType.VIEW,
+    subType: '',
+    pageId: PageId.COURSES,
+    env: Environment.HOME
+  })
   ionViewDidLoad() {
-    this.telemetryGeneratorService.generateImpressionTelemetry(
-      ImpressionType.VIEW, '',
-      PageId.COURSES,
-      Environment.HOME
-    );
-
     this.appGlobalService.generateConfigInteractEvent(PageId.COURSES, this.isOnBoardingCardCompleted);
-    this.preference.getString('show_app_walkthrough_screen')
-      .then(value => {
-        if (value === 'true') {
-          const driver = new Driver({
-            allowClose: true,
-            closeBtnText: this.commonUtilService.translateMessage('DONE'),
-            showButtons: true,
-          });
 
-          setTimeout(() => {
-            driver.highlight({
-              element: '#qrIcon',
-              popover: {
-                title: this.commonUtilService.translateMessage('ONBOARD_SCAN_QR_CODE'),
-                description: '<img src=\'assets/imgs/ic_scanqrdemo.png\' /><p>' +
-                  this.commonUtilService.translateMessage('ONBOARD_SCAN_QR_CODE_DESC', this.appLabel) + '</p>',
-                showButtons: true,         // Do not show control buttons in footer
-                closeBtnText: this.commonUtilService.translateMessage('DONE'),
-              }
-            });
+    const value = localStorage.getItem('show_app_walkthrough_screen');
 
-            const element = document.getElementById('driver-highlighted-element-stage');
-            const img = document.createElement('img');
-            img.src = 'assets/imgs/ic_scan.png';
-            img.id = 'qr_scanner';
-            element.appendChild(img);
-          }, 100);
-          this.telemetryGeneratorService.generatePageViewTelemetry(PageId.ONBOARDING_QR_SHOWCASE, Environment.ONBOARDING, PageId.COURSES);
-          this.preference.putString('show_app_walkthrough_screen', 'false');
-        }
-      });
+    if (value === 'true') {
+      this.showAppWalkthroughScreen();
+    }
+
     this.events.subscribe('event:showScanner', (data) => {
       if (data.pageName === PageId.COURSES) {
         this.qrScanner.startScanner(PageId.COURSES, false);
       }
     });
+  }
+
+  /**
+   * To get enrolled course(s) of logged-in user.
+   *
+   * It internally calls course handler of genie sdk
+   */
+  getEnrolledCourses(refreshEnrolledCourses: boolean = true, returnRefreshedCourses: boolean = false): void {
+    this.spinner(true);
+
+    const option = {
+      userId: this.userId,
+      refreshEnrolledCourses: refreshEnrolledCourses,
+      returnRefreshedEnrolledCourses: returnRefreshedCourses
+    };
+    this.courseService.getEnrolledCourses(option).toPromise()
+      .then((enrolledCourses: any) => {
+        if (enrolledCourses) {
+          enrolledCourses = JSON.parse(enrolledCourses);
+          this.ngZone.run(() => {
+            this.enrolledCourses = enrolledCourses.result.courses ? enrolledCourses.result.courses : [];
+            // maintain the list of courses that are enrolled, and store them in appglobal
+            if (this.enrolledCourses.length > 0) {
+              const courseList: Array<any> = [];
+
+              for (const course of this.enrolledCourses) {
+                courseList.push(course);
+              }
+
+              this.appGlobalService.setEnrolledCourseList(courseList);
+            }
+
+            this.spinner(false);
+          });
+        }
+      })
+      .catch((error: any) => {
+        console.log('error while loading enrolled courses', error);
+        this.spinner(false);
+      });
   }
 
   ionViewCanLeave() {
@@ -291,43 +272,21 @@ export class CoursesPage implements OnInit {
     });
   }
 
-  /**
-   * To get enrolled course(s) of logged-in user.
-   *
-   * It internally calls course handler of genie sdk
-   */
-  getEnrolledCourses(refreshEnrolledCourses: boolean = true, returnRefreshedCourses: boolean = false): void {
-    this.spinner(true);
+  getCourseTabData(refresher?) {
+    if (refresher) {
+      this.completeRefresher(refresher);
+    }
 
-    const option = {
-      userId: this.userId,
-      refreshEnrolledCourses: refreshEnrolledCourses,
-      returnRefreshedEnrolledCourses: returnRefreshedCourses
-    };
-    this.courseService.getEnrolledCourses(option)
-      .then((enrolledCourses: any) => {
-        if (enrolledCourses) {
-          enrolledCourses = JSON.parse(enrolledCourses);
-          this.ngZone.run(() => {
-            this.enrolledCourses = enrolledCourses.result.courses ? enrolledCourses.result.courses : [];
-            // maintain the list of courses that are enrolled, and store them in appglobal
-            if (this.enrolledCourses.length > 0) {
-              const courseList: Array<any> = [];
+    this.enrolledCourses = [];
+    this.popularAndLatestCourses = [];
 
-              for (const course of this.enrolledCourses) {
-                courseList.push(course);
-              }
-
-              this.appGlobalService.setEnrolledCourseList(courseList);
-            }
-
-            this.spinner(false);
-          });
-        }
+    this.getUserId()
+      .then(() => {
+        this.getPopularAndLatestCourses();
       })
-      .catch((error: any) => {
-        console.log('error while loading enrolled courses', error);
-        this.spinner(false);
+      .catch(error => {
+        console.log('Error while Fetching Data', error);
+        this.getPopularAndLatestCourses();
       });
   }
 
@@ -489,55 +448,25 @@ export class CoursesPage implements OnInit {
   }
 
   /**
-   *
-   * @param refresher
-   */
-  getCourseTabData(refresher?) {
-    setTimeout(() => {
-      if (refresher) {
-        refresher.complete();
-        this.telemetryGeneratorService.generatePullToRefreshTelemetry(PageId.COURSES, Environment.HOME);
-      }
-    }, 10);
-
-    this.enrolledCourses = [];
-    this.popularAndLatestCourses = [];
-
-    this.getUserId()
-      .then(() => {
-        this.getPopularAndLatestCourses();
-      })
-      .catch(error => {
-        console.log('Error while Fetching Data', error);
-        this.getPopularAndLatestCourses();
-      });
-  }
-
-  /**
    * It will fetch the guest user profile details
    */
   getCurrentUser(): void {
     const profileType = this.appGlobalService.getGuestUserType();
-    if (profileType === ProfileType.TEACHER && this.appGlobalService.DISPLAY_SIGNIN_FOOTER_CARD_IN_COURSE_TAB_FOR_TEACHER) {
-      this.showSignInCard = true;
-    } else {
-      this.showSignInCard = false;
-    }
+    this.showSignInCard = profileType === ProfileType.TEACHER && this.appGlobalService.DISPLAY_SIGNIN_FOOTER_CARD_IN_COURSE_TAB_FOR_TEACHER;
   }
 
-  scanQRCode() {
-    this.qrScanner.startScanner(PageId.COURSES);
+  public async search() {
+    return this.navCtrl.push(SearchPage, {contentType: ContentType.FOR_COURSE_TAB, source: PageId.COURSES});
   }
 
-  search() {
-    this.navCtrl.push(SearchPage, { contentType: ContentType.FOR_COURSE_TAB, source: PageId.COURSES });
-  }
-
+  @GenerateInteractTelemetryBeforeMethod({
+    interactType: InteractType.TOUCH,
+    subType: InteractSubtype.FILTER_BUTTON_CLICKED,
+    env: Environment.HOME,
+    pageId: PageId.COURSES,
+    object: undefined
+  })
   showFilter() {
-    this.telemetryGeneratorService.generateInteractTelemetry(InteractType.TOUCH,
-      InteractSubtype.FILTER_BUTTON_CLICKED,
-      Environment.HOME,
-      PageId.COURSES, undefined);
     const that = this;
 
     this.pageFilterCallBack = {
@@ -604,8 +533,62 @@ export class CoursesPage implements OnInit {
 
   }
 
-  showFilterPage(filterOptions) {
-    this.popCtrl.create(PageFilter, filterOptions, { cssClass: 'resource-filter' }).present();
+  scanQRCode() {
+    this.qrScanner.startScanner(PageId.COURSES);
+  }
+
+  public async showFilterPage(filterOptions) {
+    return this.popCtrl.create(PageFilter, filterOptions, {cssClass: 'resource-filter'}).present();
+  }
+
+  getContentDetails(content) {
+    const identifier = content.contentId || content.identifier;
+    this.contentService.getContentDetails({contentId: identifier}).toPromise()
+      .then((data: any) => {
+        data = JSON.parse(data);
+        if (data && data.result && data.result.isAvailableLocally) {
+          this.showOverlay = false;
+          this.navigateToContentDetailsPage(content);
+        } else {
+          this.subscribeGenieEvent();
+          this.showOverlay = true;
+          this.importContent([identifier], false);
+        }
+      })
+      .catch((error: any) => {
+        console.log(error);
+        this.commonUtilService.showToast('ERROR_CONTENT_NOT_AVAILABLE');
+      });
+  }
+
+  public async navigateToViewMoreContentsPage(showEnrolledCourses: boolean, searchQuery?: any, headerTitle?: string) {
+    let params;
+    let title;
+    if (showEnrolledCourses) {
+      title = this.commonUtilService.translateMessage('COURSES_IN_PROGRESS');
+      params = {
+        headerTitle: 'COURSES_IN_PROGRESS',
+        userId: this.userId,
+        pageName: ViewMore.PAGE_COURSE_ENROLLED
+      };
+    } else {
+      searchQuery = updateFilterInSearchQuery(searchQuery, this.appliedFilter, this.profile,
+        this.mode, this.isFilterApplied, this.appGlobalService);
+      title = headerTitle;
+      params = {
+        headerTitle: headerTitle,
+        pageName: ViewMore.PAGE_COURSE_POPULAR,
+        requestParams: searchQuery
+      };
+    }
+    const values = new Map();
+    values['SectionName'] = title;
+    this.telemetryGeneratorService.generateInteractTelemetry(InteractType.TOUCH,
+      InteractSubtype.VIEWALL_CLICKED,
+      Environment.HOME,
+      PageId.COURSES, undefined,
+      values);
+    return this.navCtrl.push(ViewMoreActivityPage, params);
   }
 
   checkEmptySearchResult(isAfterLanguageChange = false) {
@@ -637,60 +620,10 @@ export class CoursesPage implements OnInit {
     }
   }
 
-  getContentDetails(content) {
-    const identifier = content.contentId || content.identifier;
-    this.contentService.getContentDetail({ contentId: identifier })
-      .then((data: any) => {
-        data = JSON.parse(data);
-        if (data && data.result && data.result.isAvailableLocally) {
-          this.showOverlay = false;
-          this.navigateToContentDetailsPage(content);
-        } else {
-          this.subscribeGenieEvent();
-          this.showOverlay = true;
-          this.importContent([identifier], false);
-        }
-      })
-      .catch((error: any) => {
-        console.log(error);
-        this.commonUtilService.showToast('ERROR_CONTENT_NOT_AVAILABLE');
-      });
-  }
-
-  navigateToViewMoreContentsPage(showEnrolledCourses: boolean, searchQuery?: any, headerTitle?: string) {
-    let params;
-    let title;
-    if (showEnrolledCourses) {
-      title = this.commonUtilService.translateMessage('COURSES_IN_PROGRESS');
-      params = {
-        headerTitle: 'COURSES_IN_PROGRESS',
-        userId: this.userId,
-        pageName: ViewMore.PAGE_COURSE_ENROLLED
-      };
-    } else {
-      searchQuery = updateFilterInSearchQuery(searchQuery, this.appliedFilter, this.profile,
-        this.mode, this.isFilterApplied, this.appGlobalService);
-      title = headerTitle;
-      params = {
-        headerTitle: headerTitle,
-        pageName: ViewMore.PAGE_COURSE_POPULAR,
-        requestParams: searchQuery
-      };
-    }
-    const values = new Map();
-    values['SectionName'] = title;
-    this.telemetryGeneratorService.generateInteractTelemetry(InteractType.TOUCH,
-      InteractSubtype.VIEWALL_CLICKED,
-      Environment.HOME,
-      PageId.COURSES, undefined,
-      values);
-    this.navCtrl.push(ViewMoreActivityPage, params);
-  }
-
   navigateToContentDetailsPage(content) {
     const identifier = content.contentId || content.identifier;
     this.navCtrl.push(ContentDetailsPage, {
-      content: { identifier: content.lastReadContentId },
+      content: {identifier: content.lastReadContentId},
       depth: '1',
       contentState: {
         batchId: content.batchId ? content.batchId : '',
@@ -708,7 +641,7 @@ export class CoursesPage implements OnInit {
       contentStatusArray: []
     };
 
-    this.contentService.importContent(option)
+    this.contentService.importContent(option).toPromise()
       .then((data: any) => {
         data = JSON.parse(data);
         this.ngZone.run(() => {
@@ -727,6 +660,52 @@ export class CoursesPage implements OnInit {
           this.removeOverlayAndShowError();
         });
       });
+  }
+
+  cancelDownload() {
+    this.ngZone.run(() => {
+      this.contentService.cancelDownload(this.resumeContentData.contentId || this.resumeContentData.identifier).toPromise()
+        .then(() => {
+          this.tabBarElement.style.display = 'flex';
+          this.showOverlay = false;
+        }).catch(() => {
+        this.tabBarElement.style.display = 'flex';
+        this.showOverlay = false;
+      });
+    });
+  }
+
+  @GenerateImpressionTelemetryAfterMethod(
+    TelemetryRequestFactory.generatePageViewTelemetry(
+      PageId.ONBOARDING_QR_SHOWCASE, Environment.ONBOARDING, PageId.COURSES
+    )
+  )
+  private showAppWalkthroughScreen() {
+    const driver = new Driver({
+      allowClose: true,
+      closeBtnText: this.commonUtilService.translateMessage('DONE'),
+      showButtons: true,
+    });
+
+    setTimeout(() => {
+      driver.highlight({
+        element: '#qrIcon',
+        popover: {
+          title: this.commonUtilService.translateMessage('ONBOARD_SCAN_QR_CODE'),
+          description: '<img src=\'assets/imgs/ic_scanqrdemo.png\' /><p>' +
+            this.commonUtilService.translateMessage('ONBOARD_SCAN_QR_CODE_DESC', this.appLabel) + '</p>',
+          showButtons: true,         // Do not show control buttons in footer
+          closeBtnText: this.commonUtilService.translateMessage('DONE'),
+        }
+      });
+
+      const element = document.getElementById('driver-highlighted-element-stage');
+      const img = document.createElement('img');
+      img.src = 'assets/imgs/ic_scan.png';
+      img.id = 'qr_scanner';
+      element.appendChild(img);
+    }, 100);
+    localStorage.setItem('show_app_walkthrough_screen', 'false');
   }
 
   /**
@@ -759,16 +738,11 @@ export class CoursesPage implements OnInit {
     });
   }
 
-  cancelDownload() {
-    this.ngZone.run(() => {
-      this.contentService.cancelDownload(this.resumeContentData.contentId || this.resumeContentData.identifier).then(() => {
-        this.tabBarElement.style.display = 'flex';
-        this.showOverlay = false;
-      }).catch(() => {
-        this.tabBarElement.style.display = 'flex';
-        this.showOverlay = false;
-      });
-    });
+  @GenerateInteractTelemetryAfterMethod(
+    TelemetryRequestFactory.generatePullToRefreshTelemetry(PageId.COURSES, Environment.HOME)
+  )
+  private completeRefresher(refresher) {
+    refresher.complete();
   }
 
 }
